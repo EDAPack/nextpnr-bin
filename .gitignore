@@ -215,3 +215,4 @@ prjpeppercorn/
 deps-install/
 nextpnr-build/
 release/
+docs/_build/
