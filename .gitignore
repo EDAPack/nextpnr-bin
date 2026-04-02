@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# nextpnr-bin build artifacts
+icestorm/
+prjtrellis/
+nextpnr/
+mistral/
+prjpeppercorn/
+deps-install/
+nextpnr-build/
+release/

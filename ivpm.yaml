@@ -1,0 +1,14 @@
+package:
+  name: nextpnr-bin
+
+  # When installed from a release tarball, prepend the bundled nextpnr binaries
+  # to PATH so downstream tools can invoke nextpnr-ice40, nextpnr-ecp5, etc.
+  env:
+  - name: PATH
+    path-prepend: "${IVPM_PACKAGES}/nextpnr-bin/bin"
+
+  dep-sets:
+  - name: default-dev
+    deps:
+    - name: nextpnr
+      url: https://github.com/YosysHQ/nextpnr.git
