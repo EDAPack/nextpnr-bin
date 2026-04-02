@@ -82,4 +82,4 @@ jobs:
             Built from nextpnr tag ${{ steps.version.outputs.nextpnr_latest_tag }}.
           draft: false
           prerelease: false
-          files: ./release/nextpnr-bin-manylinux-x64-${{ steps.version.outputs.nextpnr_version }}.tar.gz
+          files: ./release/nextpnr-bin-manylinux_2_34_x86_64-${{ steps.version.outputs.nextpnr_version }}.tar.gz

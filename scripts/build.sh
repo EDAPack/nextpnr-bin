@@ -14,7 +14,7 @@
 #
 # Override variables:
 #   nextpnr_version  - version string for the release (default: 0.0.1)
-#   rls_plat         - platform tag for tarball name (default: linux-x64)
+#   rls_plat         - platform tag for tarball name (default: manylinux_2_34_x86_64)
 
 set -e
 
@@ -45,13 +45,13 @@ if test "x${CI_BUILD}" != "x"; then
         # Use Python 3.10 from the manylinux image as the build interpreter
         export PATH=/opt/python/cp310-cp310/bin:$PATH
 
-        rls_plat="manylinux-x64"
+        rls_plat="manylinux_2_34_x86_64"
     fi
 fi
 
 # Default platform tag for local builds
 if test "x${rls_plat}" = "x"; then
-    rls_plat="linux-x64"
+    rls_plat="manylinux_2_34_x86_64"
 fi
 
 # ── Version ───────────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ Download
 Pre-built tarballs are published as `GitHub Releases
 <https://github.com/EDAPack/nextpnr-bin/releases>`_.  Each release is named::
 
-    nextpnr-bin-manylinux-x64-<version>.tar.gz
+    nextpnr-bin-manylinux_2_34_x86_64-<version>.tar.gz
 
 Extract to any directory.  The layout inside the tarball is::
 
@@ -29,7 +29,7 @@ Add ``bin/`` to your ``PATH`` and all seven tools are ready to use.
 
 Quick start::
 
-    tar xf nextpnr-bin-manylinux-x64-<version>.tar.gz -C /opt/nextpnr
+    tar xf nextpnr-bin-manylinux_2_34_x86_64-<version>.tar.gz -C /opt/nextpnr
     export PATH=/opt/nextpnr/bin:$PATH
     nextpnr-ice40 --help
 
