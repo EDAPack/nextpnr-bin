@@ -252,6 +252,7 @@ done
 # ── Copy metadata into release tree ──────────────────────────────────────────
 cp "${proj}/ivpm.yaml" "${release_dir}/"
 cp "${proj}/LICENSE"   "${release_dir}/"
+cp "${proj}/scripts/export.envrc" "${release_dir}/"
 
 # ── Package tarball ───────────────────────────────────────────────────────────
 mkdir -p "${root}/release"
