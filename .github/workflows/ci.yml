@@ -79,6 +79,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: setup_python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: setup_msvc
         uses: ilammy/msvc-dev-cmd@v1
         with:

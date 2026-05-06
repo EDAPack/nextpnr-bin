@@ -76,6 +76,12 @@ Write-Host "=== Installing Python build-time dependencies ==="
 python -m pip install intervaltree apycula --quiet
 if ($LASTEXITCODE -ne 0) { Write-Error "pip install failed"; exit 1 }
 
+# Capture the exact Python interpreter that has apycula so we can pass it
+# to cmake as Python3_EXECUTABLE.  Without this cmake may pick up a different
+# Python on the runner that doesn't have apycula installed.
+$python_exe = (python -c "import sys; print(sys.executable)").Trim()
+Write-Host "=== Using Python: $python_exe ==="
+
 # ── Clone nextpnr ─────────────────────────────────────────────────────────────
 Write-Host "=== Cloning nextpnr ==="
 if (!(Test-Path "nextpnr")) {
@@ -138,6 +144,7 @@ cmake "$proj_fwd/nextpnr" `
     -DCMAKE_LINKER="$lld_link" `
     -DCMAKE_TOOLCHAIN_FILE="$vcpkg_fwd/scripts/buildsystems/vcpkg.cmake" `
     -DVCPKG_TARGET_TRIPLET="$triplet" `
+    -DPython3_EXECUTABLE="$python_exe" `
     -DARCH="mistral;himbaechel;generic" `
     -DHIMBAECHEL_UARCH="gowin;gatemate" `
     -DHIMBAECHEL_SPLIT=ON `
