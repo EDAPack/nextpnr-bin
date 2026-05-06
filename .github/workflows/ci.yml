@@ -7,91 +7,37 @@ on:
     - cron: "0 12 * * 0"
 
 jobs:
-# Temporarily disabled while working on Windows build
-#  docs:
-#    runs-on: ubuntu-latest
-#    permissions:
-#      contents: write
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: actions/setup-python@v5
-#        with:
-#          python-version: "3.12"
-#      - name: install_sphinx
-#        run: pip install -r docs/requirements.txt
-#      - name: build_docs
-#        run: sphinx-build -b html docs docs/_build/html
-#      - uses: peaceiris/actions-gh-pages@v3
-#        with:
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-#          publish_dir: docs/_build/html
-
-#  ci-linux:
-#    runs-on: ubuntu-latest
-#    strategy:
-#      matrix:
-#        include:
-#          - rls_plat: manylinux_2_28_x86_64
-#            image: quay.io/pypa/manylinux_2_28_x86_64
-#          - rls_plat: manylinux_2_34_x86_64
-#            image: quay.io/pypa/manylinux_2_34_x86_64
-#    steps:
-#      - uses: actions/checkout@v4
-#      - name: determine_version
-#        id: version
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          BUILD_NUM: ${{ github.run_id }}
-#        run: |
-#          nextpnr_latest_tag=$(curl -s -L \
-#            -H "Accept: application/vnd.github+json" \
-#            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-#            -H "X-GitHub-Api-Version: 2022-11-28" \
-#            https://api.github.com/repos/YosysHQ/nextpnr/git/refs/tags | \
-#            jq -r '.[].ref' | sed 's|refs/tags/||' | sort -V | tail -n 1)
-#          echo "nextpnr_latest_tag: ${nextpnr_latest_tag}"
-#          nextpnr_version=$(echo "${nextpnr_latest_tag}" | sed 's/^v//')
-#          echo "nextpnr_latest_tag=${nextpnr_latest_tag}" >> "${GITHUB_OUTPUT}"
-#          echo "nextpnr_version=${nextpnr_version}.${BUILD_NUM}"  >> "${GITHUB_OUTPUT}"
-#      - name: build
-#        env:
-#          CI_BUILD: "1"
-#          nextpnr_version: ${{ steps.version.outputs.nextpnr_version }}
-#          rls_plat: ${{ matrix.rls_plat }}
-#        run: >
-#          docker run --rm
-#          --volume "$(pwd):/io"
-#          --env CI_BUILD
-#          --env nextpnr_version
-#          --env rls_plat
-#          --workdir /io
-#          ${{ matrix.image }}
-#          /io/scripts/build.sh
-#      - name: create_release
-#        uses: softprops/action-gh-release@v2
-#        with:
-#          tag_name: "v${{ steps.version.outputs.nextpnr_version }}"
-#          name: "Release ${{ steps.version.outputs.nextpnr_version }}"
-#          files: ./release/nextpnr-bin-${{ matrix.rls_plat }}-${{ steps.version.outputs.nextpnr_version }}.tar.gz
-
-  ci-windows:
-    runs-on: windows-2022
+  docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: setup_python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: setup_msvc
-        uses: ilammy/msvc-dev-cmd@v1
+      - name: install_sphinx
+        run: pip install -r docs/requirements.txt
+      - name: build_docs
+        run: sphinx-build -b html docs docs/_build/html
+      - uses: peaceiris/actions-gh-pages@v3
         with:
-          arch: x64
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html
 
+  ci-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - rls_plat: manylinux_2_28_x86_64
+            image: quay.io/pypa/manylinux_2_28_x86_64
+          - rls_plat: manylinux_2_34_x86_64
+            image: quay.io/pypa/manylinux_2_34_x86_64
+    steps:
+      - uses: actions/checkout@v4
       - name: determine_version
         id: version
-        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUILD_NUM: ${{ github.run_id }}
@@ -102,31 +48,27 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/YosysHQ/nextpnr/git/refs/tags | \
             jq -r '.[].ref' | sed 's|refs/tags/||' | sort -V | tail -n 1)
-
           echo "nextpnr_latest_tag: ${nextpnr_latest_tag}"
           nextpnr_version=$(echo "${nextpnr_latest_tag}" | sed 's/^v//')
-
           echo "nextpnr_latest_tag=${nextpnr_latest_tag}" >> "${GITHUB_OUTPUT}"
-          echo "nextpnr_version=${nextpnr_version}.${BUILD_NUM}" >> "${GITHUB_OUTPUT}"
-
+          echo "nextpnr_version=${nextpnr_version}.${BUILD_NUM}"  >> "${GITHUB_OUTPUT}"
       - name: build
-        shell: pwsh
         env:
+          CI_BUILD: "1"
           nextpnr_version: ${{ steps.version.outputs.nextpnr_version }}
-          rls_plat: windows-x64
-        run: .\scripts\build_windows.ps1
-
+          rls_plat: ${{ matrix.rls_plat }}
+        run: >
+          docker run --rm
+          --volume "$(pwd):/io"
+          --env CI_BUILD
+          --env nextpnr_version
+          --env rls_plat
+          --workdir /io
+          ${{ matrix.image }}
+          /io/scripts/build.sh
       - name: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ steps.version.outputs.nextpnr_version }}"
           name: "Release ${{ steps.version.outputs.nextpnr_version }}"
-          body: |
-            nextpnr-bin ${{ steps.version.outputs.nextpnr_version }}
-
-            Backends (Windows): mistral, himbaechel-gowin, himbaechel-gatemate, generic
-
-            Built from nextpnr tag ${{ steps.version.outputs.nextpnr_latest_tag }}.
-          draft: false
-          prerelease: false
-          files: ./release/nextpnr-bin-windows-x64-${{ steps.version.outputs.nextpnr_version }}.zip
+          files: ./release/nextpnr-bin-${{ matrix.rls_plat }}-${{ steps.version.outputs.nextpnr_version }}.tar.gz
