@@ -129,6 +129,16 @@ $packcc = "$proj\nextpnr\mistral\pack.cc"
     -replace 'std::min\(dbits, 20L\)', 'std::min(dbits, 20LL)' |
     Set-Content $packcc
 
+# mistral/libmistral/cyclonev.h includes cv-porttypes.ipp which uses P(OUT).
+# Windows SDK defines OUT as an empty macro, causing P(OUT) -> P() -> error.
+# Wrap the include with pragma push/pop to protect against Windows SAL macros.
+Write-Host "=== Patching mistral/libmistral/cyclonev.h for Windows OUT/IN macros ==="
+$cyclonev = "$proj\mistral\libmistral\cyclonev.h"
+$cv = Get-Content $cyclonev -Raw
+$cv = $cv -replace '(#include "cv-porttypes\.ipp")', `
+    "#pragma push_macro(`"OUT`")`r`n#pragma push_macro(`"IN`")`r`n#undef OUT`r`n#undef IN`r`n`$1`r`n#pragma pop_macro(`"IN`")`r`n#pragma pop_macro(`"OUT`")"
+Set-Content $cyclonev $cv
+
 # ── Configure nextpnr ─────────────────────────────────────────────────────────
 Write-Host "=== Configuring nextpnr ==="
 New-Item -ItemType Directory -Force "$proj\nextpnr-build" | Out-Null
