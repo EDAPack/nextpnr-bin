@@ -156,6 +156,7 @@ cmake "$proj_fwd/nextpnr" `
     -DUSE_IPO=OFF `
     "-DCMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /EHsc /I$vcpkg_fwd/installed/$triplet/include" `
     "-DCMAKE_C_FLAGS=/DWIN32 /D_WINDOWS /I$vcpkg_fwd/installed/$triplet/include" `
+    "-DCMAKE_EXE_LINKER_FLAGS=/LIBPATH:$vcpkg_fwd/installed/$triplet/lib" `
     -DCMAKE_INSTALL_PREFIX="$release_fwd" `
     -DMISTRAL_ROOT="$proj_fwd/mistral" `
     -DHIMBAECHEL_PEPPERCORN_PATH="$proj_fwd/prjpeppercorn"
