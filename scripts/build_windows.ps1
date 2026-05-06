@@ -20,7 +20,6 @@
 #   rls_plat         - platform tag   (default: windows-x64)
 
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
 
 $proj = $PWD.Path
 $rls_version = if ($env:nextpnr_version) { $env:nextpnr_version } else { "0.0.1" }
@@ -100,7 +99,7 @@ if (!(Test-Path "icestorm")) {
 $icebox_dest = "$deps_prefix\share\icebox"
 New-Item -ItemType Directory -Force $icebox_dest | Out-Null
 Copy-Item -Force "$proj\icestorm\icebox\chipdb-*.txt" $icebox_dest
-Write-Host "  Copied $(( Get-ChildItem $icebox_dest -Filter 'chipdb-*.txt' ).Count) chipdb files."
+Write-Host "  Copied $(@( Get-ChildItem $icebox_dest -Filter 'chipdb-*.txt' ).Count) chipdb files."
 
 # ── Clone Mistral ─────────────────────────────────────────────────────────────
 # nextpnr-latest branch has the API compatible with current nextpnr.
