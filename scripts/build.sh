@@ -45,7 +45,11 @@ if test "x${CI_BUILD}" != "x"; then
         # Use Python 3.10 from the manylinux image as the build interpreter
         export PATH=/opt/python/cp310-cp310/bin:$PATH
 
-        rls_plat="manylinux_2_34_x86_64"
+        # rls_plat may be pre-set by the caller (e.g. from the CI matrix);
+        # default to manylinux_2_34_x86_64 if not provided.
+        if test "x${rls_plat}" = "x"; then
+            rls_plat="manylinux_2_34_x86_64"
+        fi
     fi
 fi
 
