@@ -124,9 +124,9 @@ if (!(Test-Path "prjpeppercorn")) {
 Write-Host "=== Patching nextpnr/mistral/pack.cc for Windows int/long compatibility ==="
 $packcc = "$proj\nextpnr\mistral\pack.cc"
 (Get-Content $packcc) `
-    -replace 'dbits == 40 \? 8L : 9L', 'dbits == 40 ? 8 : 9' `
-    -replace ', 0L\)', ', 0)' `
-    -replace 'std::min\(dbits, 20L\)', 'std::min(dbits, 20)' |
+    -replace 'dbits == 40 \? 8L : 9L', 'dbits == 40 ? 8LL : 9LL' `
+    -replace ', 0L\)', ', 0LL)' `
+    -replace 'std::min\(dbits, 20L\)', 'std::min(dbits, 20LL)' |
     Set-Content $packcc
 
 # ── Configure nextpnr ─────────────────────────────────────────────────────────
