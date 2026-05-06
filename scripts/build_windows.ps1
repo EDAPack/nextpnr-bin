@@ -98,8 +98,9 @@ if (!(Test-Path "icestorm")) {
 }
 $icebox_dest = "$deps_prefix\share\icebox"
 New-Item -ItemType Directory -Force $icebox_dest | Out-Null
-Copy-Item -Force "$proj\icestorm\icebox\chipdb-*.txt" $icebox_dest
-Write-Host "  Copied $(@( Get-ChildItem $icebox_dest -Filter 'chipdb-*.txt' ).Count) chipdb files."
+# Copy all icebox data files (chipdb-*.txt + timings_*.txt + anything else)
+Copy-Item -Force "$proj\icestorm\icebox\*" $icebox_dest
+Write-Host "  Copied $(@( Get-ChildItem $icebox_dest -Filter '*.txt' ).Count) icebox files."
 
 # ── Clone Mistral ─────────────────────────────────────────────────────────────
 # nextpnr-latest branch has the API compatible with current nextpnr.
