@@ -154,8 +154,8 @@ cmake "$proj_fwd/nextpnr" `
     -DBoost_USE_STATIC_LIBS=ON `
     -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
     -DUSE_IPO=OFF `
-    "-DCMAKE_CXX_FLAGS=/I$vcpkg_fwd/installed/$triplet/include" `
-    "-DCMAKE_C_FLAGS=/I$vcpkg_fwd/installed/$triplet/include" `
+    "-DCMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /EHsc /I$vcpkg_fwd/installed/$triplet/include" `
+    "-DCMAKE_C_FLAGS=/DWIN32 /D_WINDOWS /I$vcpkg_fwd/installed/$triplet/include" `
     -DCMAKE_INSTALL_PREFIX="$release_fwd" `
     -DMISTRAL_ROOT="$proj_fwd/mistral" `
     -DHIMBAECHEL_PEPPERCORN_PATH="$proj_fwd/prjpeppercorn"
