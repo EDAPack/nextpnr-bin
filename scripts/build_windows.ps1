@@ -87,20 +87,13 @@ git submodule update --init
 if ($LASTEXITCODE -ne 0) { Write-Error "git submodule update failed"; exit 1 }
 Pop-Location
 
-# ── IceStorm chipdb (data files only — no C++ build on Windows) ───────────────
-# nextpnr's FindIceStorm.cmake looks for chipdb-*.txt under
-# $ICESTORM_INSTALL_PREFIX/share/icebox/.  Those files are committed
-# directly to the icestorm repository, so we only need to clone and copy.
-Write-Host "=== Setting up IceStorm chipdb ==="
-if (!(Test-Path "icestorm")) {
-    git clone https://github.com/YosysHQ/icestorm
-    if ($LASTEXITCODE -ne 0) { Write-Error "git clone icestorm failed"; exit 1 }
-}
-$icebox_dest = "$deps_prefix\share\icebox"
-New-Item -ItemType Directory -Force $icebox_dest | Out-Null
-# Copy all icebox data files (chipdb-*.txt + timings_*.txt + anything else)
-Copy-Item -Force "$proj\icestorm\icebox\*" $icebox_dest
-Write-Host "  Copied $(@( Get-ChildItem $icebox_dest -Filter '*.txt' ).Count) icebox files."
+# ── IceStorm chipdb ───────────────────────────────────────────────────────────
+# On Linux, icestorm's chipdb-*.txt and timings_*.txt files are produced by
+# running `make install` (which invokes Python to generate timing models).
+# On Windows, make is not readily available and icestorm has no CMake build.
+# ice40 is excluded from the Windows ARCH list until we have a proper icestorm
+# build step here (e.g. via chocolatey make + Git Bash).
+Write-Host "=== IceStorm: skipped on Windows (ice40 not in ARCH) ==="
 
 # ── Clone Mistral ─────────────────────────────────────────────────────────────
 # nextpnr-latest branch has the API compatible with current nextpnr.
@@ -145,7 +138,7 @@ cmake "$proj_fwd/nextpnr" `
     -DCMAKE_LINKER="$lld_link" `
     -DCMAKE_TOOLCHAIN_FILE="$vcpkg_fwd/scripts/buildsystems/vcpkg.cmake" `
     -DVCPKG_TARGET_TRIPLET="$triplet" `
-    -DARCH="ice40;mistral;himbaechel;generic" `
+    -DARCH="mistral;himbaechel;generic" `
     -DHIMBAECHEL_UARCH="gowin;gatemate" `
     -DHIMBAECHEL_SPLIT=ON `
     -DBUILD_GUI=OFF `
@@ -155,7 +148,6 @@ cmake "$proj_fwd/nextpnr" `
     -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
     -DUSE_IPO=OFF `
     -DCMAKE_INSTALL_PREFIX="$release_fwd" `
-    -DICESTORM_INSTALL_PREFIX="$deps_fwd" `
     -DMISTRAL_ROOT="$proj_fwd/mistral" `
     -DHIMBAECHEL_PEPPERCORN_PATH="$proj_fwd/prjpeppercorn"
 

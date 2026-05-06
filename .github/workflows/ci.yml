@@ -119,7 +119,7 @@ jobs:
           body: |
             nextpnr-bin ${{ steps.version.outputs.nextpnr_version }}
 
-            Backends (Windows): ice40, mistral, himbaechel-gowin, himbaechel-gatemate, generic
+            Backends (Windows): mistral, himbaechel-gowin, himbaechel-gatemate, generic
 
             Built from nextpnr tag ${{ steps.version.outputs.nextpnr_latest_tag }}.
           draft: false
