@@ -118,6 +118,17 @@ if (!(Test-Path "prjpeppercorn")) {
     if ($LASTEXITCODE -ne 0) { Write-Error "git clone prjpeppercorn failed"; exit 1 }
 }
 
+# ── Patch nextpnr for Windows compatibility ──────────────────────────────────
+# mistral/pack.cc uses int/long mixed types in std::max/std::min which MSVC
+# treats as different types; remove the L suffixes to use plain int literals.
+Write-Host "=== Patching nextpnr/mistral/pack.cc for Windows int/long compatibility ==="
+$packcc = "$proj\nextpnr\mistral\pack.cc"
+(Get-Content $packcc) `
+    -replace 'dbits == 40 \? 8L : 9L', 'dbits == 40 ? 8 : 9' `
+    -replace ', 0L\)', ', 0)' `
+    -replace 'std::min\(dbits, 20L\)', 'std::min(dbits, 20)' |
+    Set-Content $packcc
+
 # ── Configure nextpnr ─────────────────────────────────────────────────────────
 Write-Host "=== Configuring nextpnr ==="
 New-Item -ItemType Directory -Force "$proj\nextpnr-build" | Out-Null
