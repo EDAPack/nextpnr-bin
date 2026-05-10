@@ -131,7 +131,8 @@ mkdir -p libtrellis/build
 cd libtrellis/build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX="${deps_prefix}" \
-    -DCMAKE_INSTALL_LIBDIR=lib
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_POLICY_DEFAULT_CMP0167=OLD
 if test $? -ne 0; then exit 1; fi
 make -j$(nproc)
 if test $? -ne 0; then exit 1; fi
@@ -198,6 +199,7 @@ cmake "${proj}/nextpnr" \
     -DBoost_USE_STATIC_LIBS=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DUSE_IPO=OFF \
+    -DCMAKE_POLICY_DEFAULT_CMP0167=OLD \
     -DCMAKE_INSTALL_PREFIX="${release_dir}" \
     -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc" \
     -DICESTORM_INSTALL_PREFIX="${deps_prefix}" \
