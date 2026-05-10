@@ -45,6 +45,12 @@ if test "x${CI_BUILD}" != "x"; then
         # Use Python 3.10 from the manylinux image as the build interpreter
         export PATH=/opt/python/cp310-cp310/bin:$PATH
 
+        # The manylinux images ship a newer cmake in /usr/local/bin that may be
+        # CMake 4.x (which removed the bundled FindBoost.cmake module).  Install
+        # cmake via pip into /opt/python/cp310-cp310/bin so it takes priority in
+        # PATH and we always build with a cmake that still has FindBoost.cmake.
+        pip install "cmake<3.30" --quiet
+
         # rls_plat may be pre-set by the caller (e.g. from the CI matrix);
         # default to manylinux_2_34_x86_64 if not provided.
         if test "x${rls_plat}" = "x"; then
@@ -131,8 +137,7 @@ mkdir -p libtrellis/build
 cd libtrellis/build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX="${deps_prefix}" \
-    -DCMAKE_INSTALL_LIBDIR=lib \
-    -DCMAKE_POLICY_DEFAULT_CMP0167=OLD
+    -DCMAKE_INSTALL_LIBDIR=lib
 if test $? -ne 0; then exit 1; fi
 make -j$(nproc)
 if test $? -ne 0; then exit 1; fi
@@ -199,7 +204,6 @@ cmake "${proj}/nextpnr" \
     -DBoost_USE_STATIC_LIBS=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DUSE_IPO=OFF \
-    -DCMAKE_POLICY_DEFAULT_CMP0167=OLD \
     -DCMAKE_INSTALL_PREFIX="${release_dir}" \
     -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc" \
     -DICESTORM_INSTALL_PREFIX="${deps_prefix}" \
