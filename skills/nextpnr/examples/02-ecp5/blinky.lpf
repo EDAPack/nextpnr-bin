@@ -1,0 +1,8 @@
+## ECP5 25k generic constraint stub.  Real boards (OrangeCrab,
+## ULX3S, Versa, ECPIX-5) ship their own LPFs with all peripherals
+## constrained — copy from those.
+LOCATE COMP "clk" SITE "A10";
+IOBUF  PORT "clk" IO_TYPE=LVCMOS33;
+LOCATE COMP "led" SITE "B11";
+IOBUF  PORT "led" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25 MHZ;

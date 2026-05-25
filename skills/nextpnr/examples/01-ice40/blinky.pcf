@@ -1,0 +1,3 @@
+# iCEstick HX1K-TQ144 board: pin 21 = 12 MHz osc, pin 99 = LED.
+set_io clk 21
+set_io led 99

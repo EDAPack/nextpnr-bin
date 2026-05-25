@@ -1,0 +1,7 @@
+# Agent Skills shipped in the nextpnr-bin release tarball.
+# Consumed by update/stage-skills.py from scripts/build.sh.
+# See SKILL_DEVELOPMENT_PROCESS.md (repo root) for the authoring process.
+skills:
+  - name: nextpnr
+    path: skills/nextpnr
+    binaries: [nextpnr-ice40, nextpnr-ecp5, nextpnr-machxo2, nextpnr-mistral, nextpnr-himbaechel, nextpnr-generic]
