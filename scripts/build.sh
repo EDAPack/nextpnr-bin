@@ -14,8 +14,10 @@ set -euo pipefail
 
 # --- locate edapack-common --------------------------------------------------
 if [ -z "${EC_COMMON:-}" ]; then
-    _cand="$(cd "$(dirname "$0")/../../edapack-common" 2>/dev/null && pwd || true)"
-    [ -n "$_cand" ] && EC_COMMON="$_cand"
+    _repo="$(cd "$(dirname "$0")/.." && pwd)"
+    for _c in "$_repo/packages/edapack-common" "$_repo/../edapack-common"; do
+        if [ -f "$_c/scripts/build-common.sh" ]; then EC_COMMON="$_c"; break; fi
+    done
 fi
 if [ -z "${EC_COMMON:-}" ] || [ ! -f "$EC_COMMON/scripts/build-common.sh" ]; then
     echo "ERROR: edapack-common not found. Set EC_COMMON or place edapack-common beside nextpnr-bin." >&2
@@ -32,11 +34,13 @@ ec_prepare_candidate
 os="$(uname -s)"
 plat="${EC_IMAGE_NAME:-manylinux_2_34_x86_64}"
 
-# Degraded-mode dependency install (prebaked image already has the toolchain
-# and the intervaltree/apycula chipdb generators).
+# Provision the stock manylinux image (EC_INSTALL_DEPS=1 in CI/local).
 if [ "${EC_INSTALL_DEPS:-0}" = "1" ] && [ "$os" = "Linux" ]; then
     yum install -y cmake python3-devel boost-devel boost-static eigen3-devel \
         libffi-devel zlib-devel xz-devel bzip2-devel libzstd-devel gcc-c++ git make pkg-config || true
+    # use the manylinux cpython, and pin cmake<3.30 so FindBoost.cmake is present;
+    # intervaltree/apycula are build-time chipdb generators.
+    [ -d /opt/python/cp310-cp310/bin ] && export PATH=/opt/python/cp310-cp310/bin:$PATH
     pip install --quiet "cmake<3.30" intervaltree apycula || true
 fi
 
