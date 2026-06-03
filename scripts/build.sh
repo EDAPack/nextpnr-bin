@@ -1,200 +1,76 @@
-#!/bin/sh -x
+#!/usr/bin/env bash
+# nextpnr-bin build driver.
 #
-# Build script for nextpnr-bin.
+# Builds nextpnr (ice40, ecp5, machxo2, mistral, himbaechel gowin+gatemate,
+# generic) from the exact commits resolved by edapack-common's resolve-inputs.py
+# and emits a release manifest. Non-standard deps (icestorm chipdb, prjtrellis,
+# mistral, prjpeppercorn) are cloned at their resolved commits and built/embedded
+# so the nextpnr-* binaries are portable.
 #
-# Builds nextpnr with the following backends:
-#   ice40, ecp5, machxo2, mistral, himbaechel (gowin + gatemate), generic
-#
-# All non-standard dependencies are built from source and embedded or linked
-# statically so that the resulting nextpnr-* binaries are portable.
-#
-# Usage:
-#   ./scripts/build.sh                   # local build
-#   CI_BUILD=1 ./scripts/build.sh        # CI build (installs system packages)
-#
-# Override variables:
-#   nextpnr_version  - version string for the release (default: 0.0.1)
-#   rls_plat         - platform tag for tarball name (default: manylinux_2_34_x86_64)
+# Runs in CI (reusable workflow) and locally (local-build.sh). All transient
+# state goes to WORK_DIR; tarball + manifest land in OUT_DIR; the source tree is
+# never written to.
+set -euo pipefail
 
-set -e
+# --- locate edapack-common --------------------------------------------------
+if [ -z "${EC_COMMON:-}" ]; then
+    _cand="$(cd "$(dirname "$0")/../../edapack-common" 2>/dev/null && pwd || true)"
+    [ -n "$_cand" ] && EC_COMMON="$_cand"
+fi
+if [ -z "${EC_COMMON:-}" ] || [ ! -f "$EC_COMMON/scripts/build-common.sh" ]; then
+    echo "ERROR: edapack-common not found. Set EC_COMMON or place edapack-common beside nextpnr-bin." >&2
+    exit 1
+fi
+# shellcheck source=/dev/null
+source "$EC_COMMON/scripts/build-common.sh"
 
-root=$(pwd)
-proj=$(pwd)
+: "${EC_PACKAGE:=nextpnr-bin}"
+export EC_PACKAGE
+ec_init_dirs
+ec_prepare_candidate
 
-# ── CI environment setup ──────────────────────────────────────────────────────
-if test "x${CI_BUILD}" != "x"; then
-    if test "$(uname -s)" = "Linux"; then
-        dnf update -y
-        # Core build tools
-        dnf install -y \
-            cmake \
-            python3-devel \
-            boost-devel \
-            boost-static \
-            eigen3-devel \
-            libffi-devel \
-            zlib-devel \
-            xz-devel \
-            bzip2-devel \
-            libzstd-devel \
-            gcc-c++ \
-            git \
-            make \
-            pkg-config
+os="$(uname -s)"
+plat="${EC_IMAGE_NAME:-manylinux_2_34_x86_64}"
 
-        # Use Python 3.10 from the manylinux image as the build interpreter
-        export PATH=/opt/python/cp310-cp310/bin:$PATH
-
-        # The manylinux images ship a newer cmake in /usr/local/bin that may be
-        # CMake 4.x (which removed the bundled FindBoost.cmake module).  Install
-        # cmake via pip into /opt/python/cp310-cp310/bin so it takes priority in
-        # PATH and we always build with a cmake that still has FindBoost.cmake.
-        pip install "cmake<3.30" --quiet
-
-        # rls_plat may be pre-set by the caller (e.g. from the CI matrix);
-        # default to manylinux_2_34_x86_64 if not provided.
-        if test "x${rls_plat}" = "x"; then
-            rls_plat="manylinux_2_34_x86_64"
-        fi
-    fi
+# Degraded-mode dependency install (prebaked image already has the toolchain
+# and the intervaltree/apycula chipdb generators).
+if [ "${EC_INSTALL_DEPS:-0}" = "1" ] && [ "$os" = "Linux" ]; then
+    yum install -y cmake python3-devel boost-devel boost-static eigen3-devel \
+        libffi-devel zlib-devel xz-devel bzip2-devel libzstd-devel gcc-c++ git make pkg-config || true
+    pip install --quiet "cmake<3.30" intervaltree apycula || true
 fi
 
-# Default platform tag for local builds
-if test "x${rls_plat}" = "x"; then
-    rls_plat="manylinux_2_34_x86_64"
-fi
+deps_prefix="$WORK_DIR/deps-install"
+release_root="$WORK_DIR/release/nextpnr"
+rm -rf "$deps_prefix" "$release_root"
+mkdir -p "$deps_prefix" "$release_root/bin"
 
-# ── Version ───────────────────────────────────────────────────────────────────
-if test "x${nextpnr_version}" != "x"; then
-    rls_version=${nextpnr_version}
-else
-    rls_version=0.0.1
-fi
+njobs="$(nproc 2>/dev/null || echo 4)"
 
-deps_prefix="${proj}/deps-install"
-mkdir -p "${deps_prefix}"
+# --- clone resolved inputs --------------------------------------------------
+nextpnr_src="$(ec_clone_input nextpnr "$(ec_input_get nextpnr repo)" "$(ec_input_get nextpnr resolved_sha)")"
+icestorm_src="$(ec_clone_input icestorm "$(ec_input_get icestorm repo)" "$(ec_input_get icestorm resolved_sha)")"
+trellis_src="$(ec_clone_input prjtrellis "$(ec_input_get prjtrellis repo)" "$(ec_input_get prjtrellis resolved_sha)")"
+mistral_src="$(ec_clone_input mistral "$(ec_input_get mistral repo)" "$(ec_input_get mistral resolved_sha)")"
+peppercorn_src="$(ec_clone_input prjpeppercorn "$(ec_input_get prjpeppercorn repo)" "$(ec_input_get prjpeppercorn resolved_sha)")"
 
-release_dir="${root}/release/nextpnr-${rls_version}"
-rm -rf "${release_dir}"
-mkdir -p "${release_dir}/bin"
+# --- IceStorm chipdb (no iceprog; just the share/icebox data) ---------------
+make -C "$icestorm_src" -j"$njobs" ICEPROG=0 PREFIX="$deps_prefix"
+make -C "$icestorm_src" install ICEPROG=0 PREFIX="$deps_prefix"
 
-# Allow git to operate on directories that may be owned by the host user
-# (relevant when running as root inside a container with a bind-mounted repo).
-git config --global --add safe.directory "${proj}" 2>/dev/null || true
+# --- Project Trellis (pytrellis, build-time chipdb generator) ---------------
+mkdir -p "$trellis_src/libtrellis/build"
+cmake -S "$trellis_src/libtrellis" -B "$trellis_src/libtrellis/build" \
+    -DCMAKE_INSTALL_PREFIX="$deps_prefix" -DCMAKE_INSTALL_LIBDIR=lib
+make -C "$trellis_src/libtrellis/build" -j"$njobs"
+make -C "$trellis_src/libtrellis/build" install
+export LD_LIBRARY_PATH="$deps_prefix/lib/trellis${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PYTHONPATH="$deps_prefix/lib/trellis${PYTHONPATH:+:${PYTHONPATH}}"
 
-# ── Python build-time dependencies ───────────────────────────────────────────
-# intervaltree: required by prjtrellis Python scripts at CMake configure time
-# apycula:      gowin chipdb generator invoked by nextpnr CMake for himbaechel-gowin
-pip install intervaltree apycula --quiet
-if test $? -ne 0; then exit 1; fi
-
-# ── Clone nextpnr ─────────────────────────────────────────────────────────────
-if test ! -d nextpnr; then
-    git clone https://github.com/YosysHQ/nextpnr
-    if test $? -ne 0; then exit 1; fi
-fi
-git config --global --add safe.directory "${proj}/nextpnr" 2>/dev/null || true
-cd "${proj}/nextpnr"
-git submodule update --init
-if test $? -ne 0; then exit 1; fi
-cd "${proj}"
-
-# ── Build IceStorm ────────────────────────────────────────────────────────────
-# We only need the chipdb data files (share/icebox/) for nextpnr's build-time
-# chipdb generation.  The hardware programmer (iceprog) requires libftdi and
-# is not needed here; we skip it by building selected subdirs only, then copy
-# the data files directly.
-if test ! -d icestorm; then
-    git clone https://github.com/YosysHQ/icestorm
-    if test $? -ne 0; then exit 1; fi
-fi
-git config --global --add safe.directory "${proj}/icestorm" 2>/dev/null || true
-cd "${proj}/icestorm"
-# Build without iceprog (ICEPROG defaults to 1 in config.mk but needs libftdi).
-# The icebox subdir generates chipdb-*.txt from Python scripts; this is what
-# nextpnr's FindIceStorm.cmake looks for under $ICESTORM_INSTALL_PREFIX/share/icebox/.
-make -j$(nproc) ICEPROG=0 PREFIX="${deps_prefix}"
-if test $? -ne 0; then exit 1; fi
-make install ICEPROG=0 PREFIX="${deps_prefix}"
-if test $? -ne 0; then exit 1; fi
-cd "${proj}"
-
-# ── Build Project Trellis ─────────────────────────────────────────────────────
-# Provides pytrellis (a Python extension) used by nextpnr CMake to generate
-# the ECP5/MachXO2 chipdb.  pytrellis.so is a build-time dependency only;
-# it is NOT linked into the nextpnr binaries.
-if test ! -d prjtrellis; then
-    git clone https://github.com/YosysHQ/prjtrellis
-    if test $? -ne 0; then exit 1; fi
-fi
-git config --global --add safe.directory "${proj}/prjtrellis" 2>/dev/null || true
-cd "${proj}/prjtrellis"
-git submodule update --init --recursive
-if test $? -ne 0; then exit 1; fi
-# Out-of-tree build; force lib (not lib64) so FindTrellis.cmake can find
-# pytrellis under $TRELLIS_INSTALL_PREFIX/lib/trellis/ on all platforms.
-mkdir -p libtrellis/build
-cd libtrellis/build
-cmake .. \
-    -DCMAKE_INSTALL_PREFIX="${deps_prefix}" \
-    -DCMAKE_INSTALL_LIBDIR=lib
-if test $? -ne 0; then exit 1; fi
-make -j$(nproc)
-if test $? -ne 0; then exit 1; fi
-make install
-if test $? -ne 0; then exit 1; fi
-cd "${proj}"
-
-# pytrellis.so must be on LD_LIBRARY_PATH and PYTHONPATH so that nextpnr's
-# CMake configure step can import it when generating the ECP5/MachXO2 chipdb.
-export LD_LIBRARY_PATH="${deps_prefix}/lib/trellis${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-export PYTHONPATH="${deps_prefix}/lib/trellis${PYTHONPATH:+:${PYTHONPATH}}"
-
-# ── Clone Mistral ─────────────────────────────────────────────────────────────
-# The 'nextpnr-latest' branch has the API compatible with current nextpnr.
-# Mistral is NOT installed separately; nextpnr's CMake adds it as a
-# subdirectory (add_subdirectory) and compiles it inline, embedding the
-# Cyclone V chipdb directly into the nextpnr-mistral binary.
-if test ! -d mistral; then
-    git clone -b nextpnr-latest https://github.com/Ravenslofty/mistral
-    if test $? -ne 0; then exit 1; fi
-fi
-git config --global --add safe.directory "${proj}/mistral" 2>/dev/null || true
-
-# ── Clone Project Peppercorn ──────────────────────────────────────────────────
-# Peppercorn is also NOT installed; nextpnr's CMake reads device database
-# files directly from the source checkout at configure time to generate the
-# GateMate chipdb compiled into nextpnr-himbaechel-gatemate.
-if test ! -d prjpeppercorn; then
-    git clone https://github.com/YosysHQ/prjpeppercorn
-    if test $? -ne 0; then exit 1; fi
-fi
-git config --global --add safe.directory "${proj}/prjpeppercorn" 2>/dev/null || true
-
-# ── Build nextpnr ─────────────────────────────────────────────────────────────
-mkdir -p "${proj}/nextpnr-build"
-cd "${proj}/nextpnr-build"
-
-# Portability notes:
-#
-#   STATIC_BUILD=OFF          - do NOT use -static (requires glibc-static, breaks
-#                               mistral's C compiler test in add_subdirectory).
-#                               manylinux relies on glibc backward compatibility
-#                               instead of fully-static libc linking.
-#   Boost_USE_STATIC_LIBS=ON  - link Boost as .a to avoid runtime libboost_*.so deps
-#   BUILD_PYTHON=OFF          - no Python embedding; avoids libpython runtime dep
-#   BUILD_GUI=OFF             - no Qt; avoids libQt runtime deps
-#   USE_IPO=OFF               - skip LTO to keep CI link times reasonable
-#   -static-libstdc++         - embed libstdc++ into the binary; avoids version skew
-#   -static-libgcc            - embed libgcc_s; same reason
-#
-#   All backend chipdb data is generated at build time and compiled into the
-#   binaries (BBA format), so there are NO external data paths at runtime.
-#
-#   HIMBAECHEL_SPLIT=ON - produces separate nextpnr-himbaechel-gowin and
-#                         nextpnr-himbaechel-gatemate binaries for clarity.
-
-cmake "${proj}/nextpnr" \
+# --- nextpnr (mistral + peppercorn compiled/read inline; see flags) ---------
+build_dir="$WORK_DIR/nextpnr-build"
+rm -rf "$build_dir"; mkdir -p "$build_dir"
+cmake -S "$nextpnr_src" -B "$build_dir" \
     -DARCH="ice40;ecp5;machxo2;mistral;himbaechel;generic" \
     -DHIMBAECHEL_UARCH="gowin;gatemate" \
     -DHIMBAECHEL_SPLIT=ON \
@@ -204,89 +80,36 @@ cmake "${proj}/nextpnr" \
     -DBoost_USE_STATIC_LIBS=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DUSE_IPO=OFF \
-    -DCMAKE_INSTALL_PREFIX="${release_dir}" \
+    -DCMAKE_INSTALL_PREFIX="$release_root" \
     -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc" \
-    -DICESTORM_INSTALL_PREFIX="${deps_prefix}" \
-    -DTRELLIS_INSTALL_PREFIX="${deps_prefix}" \
-    -DMISTRAL_ROOT="${proj}/mistral" \
-    -DHIMBAECHEL_PEPPERCORN_PATH="${proj}/prjpeppercorn"
-if test $? -ne 0; then exit 1; fi
+    -DICESTORM_INSTALL_PREFIX="$deps_prefix" \
+    -DTRELLIS_INSTALL_PREFIX="$deps_prefix" \
+    -DMISTRAL_ROOT="$mistral_src" \
+    -DHIMBAECHEL_PEPPERCORN_PATH="$peppercorn_src"
+make -C "$build_dir" -j"$njobs"
+make -C "$build_dir" install
 
-make -j$(nproc)
-if test $? -ne 0; then exit 1; fi
+chmod +x "$release_root/bin/"* 2>/dev/null || true
+strip --strip-unneeded "$release_root/bin/"nextpnr-* 2>/dev/null || true
 
-make install
-if test $? -ne 0; then exit 1; fi
-
-cd "${proj}"
-chmod +x "${release_dir}/bin/"*
-
-# Strip debug symbols — reduces binary sizes by ~70-80%
-strip --strip-unneeded "${release_dir}/bin/"nextpnr-*
-
-# ── Portability check ─────────────────────────────────────────────────────────
-# After a static build the only acceptable dynamic deps are low-level glibc
-# interfaces (libc, libm, libpthread, libdl, librt, ld-linux) and the vDSO.
-# Anything else indicates a library that was not statically linked and would
-# need to be bundled or the build flags adjusted.
-echo ""
-echo "=== Dynamic library check ==="
-for bin in "${release_dir}/bin/nextpnr-"*; do
-    # Acceptable dynamic deps on any modern Linux (manylinux_2_34 baseline):
-    #   glibc:        libc, libm, libpthread, libdl, librt, ld-linux
-    #   kernel:       linux-vdso
-    #   compression:  libz (zlib), libbz2 (bzip2), liblzma (xz), libzstd
-    #                 — all part of the base OS on every modern distro;
-    #                   these come from Boost iostreams static lib's transitive deps.
+# --- portability check (static build: only low-level glibc deps allowed) ----
+ec_log "dynamic library check"
+for bin in "$release_root/bin/nextpnr-"*; do
+    [ -e "$bin" ] || continue
     unexpected=$(ldd "$bin" 2>/dev/null | grep -v \
-        -e "linux-vdso" \
-        -e "ld-linux" \
-        -e "libc\.so" \
-        -e "libm\.so" \
-        -e "libpthread\.so" \
-        -e "libdl\.so" \
-        -e "librt\.so" \
-        -e "libz\.so" \
-        -e "libbz2\.so" \
-        -e "liblzma\.so" \
-        -e "libzstd\.so" \
-        || true)
-    if test -n "$unexpected"; then
-        echo "WARNING: $(basename $bin) has unexpected dynamic deps (may need bundling):"
+        -e "linux-vdso" -e "ld-linux" -e "libc\.so" -e "libm\.so" \
+        -e "libpthread\.so" -e "libdl\.so" -e "librt\.so" \
+        -e "libz\.so" -e "libbz2\.so" -e "liblzma\.so" -e "libzstd\.so" || true)
+    if [ -n "$unexpected" ]; then
+        ec_log "WARNING: $(basename "$bin") has unexpected dynamic deps:"
         echo "$unexpected"
-    else
-        echo "OK: $(basename $bin)"
     fi
 done
 
-# ── Copy metadata into release tree ──────────────────────────────────────────
-cp "${proj}/ivpm.yaml" "${release_dir}/"
-cp "${proj}/LICENSE"   "${release_dir}/"
-cp "${proj}/scripts/export.envrc" "${release_dir}/"
-
-# ── Stage Agent Skills ────────────────────────────────────────────────────────
-# Skills are authored under skills/<name>/ and listed in
-# scripts/skill-manifest.yaml.  update/stage-skills.py validates each
-# skill's frontmatter and binary references and emits skills/index.json.
-manifest="${proj}/scripts/skill-manifest.yaml"
-if test -f "${manifest}"; then
-    echo "=== Staging Agent Skills ==="
-    python3 "${proj}/../update/stage-skills.py" \
-        --manifest "${manifest}" \
-        --source-root "${proj}" \
-        --release-root "${release_dir}" \
-        --dest "${release_dir}/skills"
-    if test $? -ne 0; then
-        echo "ERROR: skill staging failed" >&2
-        exit 1
-    fi
-fi
-
-# ── Package tarball ───────────────────────────────────────────────────────────
-mkdir -p "${root}/release"
-cd "${root}/release"
-tar czf "nextpnr-bin-${rls_plat}-${rls_version}.tar.gz" "nextpnr-${rls_version}"
-if test $? -ne 0; then exit 1; fi
-
-echo ""
-echo "=== Built: release/nextpnr-bin-${rls_plat}-${rls_version}.tar.gz ==="
+# --- metadata + shared release tail -----------------------------------------
+cp "$SRC_DIR/ivpm.yaml" "$release_root/" 2>/dev/null || true
+cp "$SRC_DIR/LICENSE"   "$release_root/" 2>/dev/null || true
+ec_finalize_release "$SRC_DIR" "$release_root" "$CANDIDATE_JSON"
+tarball="nextpnr-bin-${plat}-${EC_VERSION}.tar.gz"
+ec_make_tarball "$release_root" "$tarball"
+ec_log "build complete: $tarball"

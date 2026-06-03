@@ -219,3 +219,14 @@ docs/_build/
 
 packages/
 
+
+# edapack: rootless build dirs + cloned input sources
+.build/
+dist/
+deps-install/
+nextpnr-build/
+/nextpnr/
+/icestorm/
+/prjtrellis/
+/mistral/
+/prjpeppercorn/
