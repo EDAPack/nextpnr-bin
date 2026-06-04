@@ -11,7 +11,11 @@
 #   icestorm       - chipdb data (share/icebox) for ice40
 #   prjtrellis     - pytrellis -> ECP5/MachXO2 chipdb (build-time)
 #   mistral        - Cyclone V; compiled inline by nextpnr
-#   prjpeppercorn  - GateMate device db (build-time)
+#   prjpeppercorn  - GateMate device db (build-time). Pinned to tag:v1.12
+#                    (DATABASE_VERSION 1.12) to match nextpnr-0.10's gatemate
+#                    arch_gen.py EXPECTED_VERSION=1.12. branch:main has moved to
+#                    1.13 and fails the version check (silent os._exit(-1) -> 255).
+#                    Re-pin when bumping the nextpnr core_ref to a 1.13 release.
 schema: edapack.build-inputs/1
 
 core:
@@ -31,4 +35,4 @@ dependencies:
     policy: branch:nextpnr-latest
   - name: prjpeppercorn
     repo: https://github.com/YosysHQ/prjpeppercorn
-    policy: branch:main
+    policy: tag:v1.12
