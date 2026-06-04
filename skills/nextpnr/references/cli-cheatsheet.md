@@ -48,11 +48,13 @@
 - Constraints: `--qsf <f>`.
 - Output: `--rbf <f>`.
 
-### `nextpnr-himbaechel`
-- `--uarch <gowin|gatemate|...>`.
-- `--device <part>`.
+### `nextpnr-himbaechel-gowin` / `nextpnr-himbaechel-gatemate`
+- Split per-uarch binaries (`HIMBAECHEL_SPLIT=ON`); no `--uarch` flag.
+- `--device <part>` — the uarch is fixed by the binary and matched from
+  the device string.
 - `--vopt <key=val>` (repeatable). Common keys: `cst=<file>` (Gowin
   pin constraints), `cfg=<file>`, `family=...`.
+- `--list-uarch` confirms the included uarch.
 - Output: `--write <f>` (then arch packer).
 
 ### `nextpnr-generic`

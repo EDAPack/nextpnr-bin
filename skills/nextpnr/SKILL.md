@@ -2,7 +2,7 @@
 name: nextpnr
 description: Portable open-source FPGA place-and-route. Reads a JSON netlist from yosys, places cells and routes nets for a specific FPGA architecture (iCE40, ECP5, MachXO2, Mistral/Cyclone V, Himbaechel-driven Gowin/GateMate, plus a generic backend), and writes a target-specific output (.asc for iCE40, textual config for ECP5/Nexus, etc.).
 license: ISC
-version: "0.7"
+version: "0.8"
 ---
 
 # nextpnr — Agent Skill
@@ -128,13 +128,15 @@ nextpnr-ecp5 --25k --package CABGA381 --speed 6 \
 - Output: `--rbf <f>` (raw binary).
 - Slow PnR; expect minutes for non-trivial designs.
 
-### `nextpnr-himbaechel`
-- `--uarch <name>` — currently `gowin`, `gatemate`, plus experimental
-  drivers.
-- `--device <part>` — e.g. `GW1N-LV1QN48C6/I5` (Tang Nano 1K),
-  `GW2A-LV18PG256C8/I7` (Tang Primer 25K).
+### `nextpnr-himbaechel-gowin` / `nextpnr-himbaechel-gatemate`
+- This build sets `HIMBAECHEL_SPLIT=ON`, so each Himbächel micro-arch ships
+  as its own binary. There is no single `nextpnr-himbaechel` and no `--uarch`
+  flag — the uarch is fixed by the binary and matched from `--device`.
+- `--device <part>` — gowin e.g. `GW1N-LV1QN48C6/I5` (Tang Nano 1K),
+  `GW2A-LV18PG256C8/I7` (Tang Primer 25K); gatemate `CCGM1A1` / `CCGM1A2`.
 - Constraints: `--vopt cst=<f>` (Gowin CST) or `--vopt cfg=<f>`.
 - Output: `--write <f>` (textual config) → arch-specific packer.
+- `--list-uarch` reports the uarch compiled into that binary.
 
 ### `nextpnr-generic`
 - For Python-driven custom architectures (`--arch generic

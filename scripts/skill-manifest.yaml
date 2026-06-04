@@ -4,4 +4,5 @@
 skills:
   - name: nextpnr
     path: skills/nextpnr
-    binaries: [nextpnr-ice40, nextpnr-ecp5, nextpnr-machxo2, nextpnr-mistral, nextpnr-himbaechel, nextpnr-generic]
+    # HIMBAECHEL_SPLIT=ON yields split gowin/gatemate binaries (no plain nextpnr-himbaechel).
+    binaries: [nextpnr-ice40, nextpnr-ecp5, nextpnr-machxo2, nextpnr-mistral, nextpnr-himbaechel-gowin, nextpnr-himbaechel-gatemate, nextpnr-generic]

@@ -48,15 +48,17 @@ Fix: use the right format for the arch — `pcf` for ice40,
 `lpf` for ecp5/machxo2, `qsf` for mistral, `cst`/`cfg` for
 himbaechel-gowin.
 
-## `nextpnr-himbaechel: ERROR: Could not find device 'X'`
-Cause: the `--device` string doesn't match a chipdb entry for the
-chosen `--uarch`.
-Fix: list valid devices (where supported by the build):
+## `nextpnr-himbaechel-*: ERROR: unable to load uarch for device 'X'`
+Cause: the `--device` string doesn't match a chipdb entry in this binary's
+uarch — often a gowin device passed to `nextpnr-himbaechel-gatemate` (or vice
+versa). This build splits himbaechel into per-uarch binaries; there is no
+`--uarch` flag.
+Fix: run the binary that matches your target, and confirm its uarch:
 ```
-nextpnr-himbaechel --uarch gowin --help-device
+nextpnr-himbaechel-gowin --list-uarch
 ```
 Or look at the chipdb directory shipped under
-`<release>/share/nextpnr/himbaechel/*.bba`.
+`<release>/share/nextpnr/himbaechel/<uarch>/*.bin`.
 
 ## Hang in placement (no progress for minutes)
 Cause: HEAP placer got stuck on a hard design.
