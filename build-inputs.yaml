@@ -3,23 +3,32 @@
 #
 # Note: the apicula (apycula) and intervaltree chipdb generators are pip
 # build-time tools baked into the builder image; they are not git-tracked here.
+#
+# Keep comments on their own lines: the published @v1 resolver does not strip
+# trailing inline comments, so `policy: latest-tag  # ...` would be parsed with
+# the comment attached and rejected as an unknown policy.
 schema: edapack.build-inputs/1
 
 core:
   name: nextpnr
   repo: https://github.com/YosysHQ/nextpnr
-  policy: latest-tag           # pin with core_ref=nextpnr-0.10 (or a branch/sha)
+  # pin with core_ref=nextpnr-0.10 (or a branch/sha)
+  policy: latest-tag
 
 dependencies:
-  - name: icestorm             # chipdb data (share/icebox) for ice40
+  # chipdb data (share/icebox) for ice40
+  - name: icestorm
     repo: https://github.com/YosysHQ/icestorm
     policy: branch:main
-  - name: prjtrellis           # pytrellis -> ECP5/MachXO2 chipdb (build-time)
+  # pytrellis -> ECP5/MachXO2 chipdb (build-time)
+  - name: prjtrellis
     repo: https://github.com/YosysHQ/prjtrellis
     policy: branch:main
-  - name: mistral              # Cyclone V; compiled inline by nextpnr
+  # Cyclone V; compiled inline by nextpnr
+  - name: mistral
     repo: https://github.com/Ravenslofty/mistral
     policy: branch:nextpnr-latest
-  - name: prjpeppercorn        # GateMate device db (build-time)
+  # GateMate device db (build-time)
+  - name: prjpeppercorn
     repo: https://github.com/YosysHQ/prjpeppercorn
     policy: branch:main
