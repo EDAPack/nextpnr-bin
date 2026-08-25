@@ -111,7 +111,8 @@ for bin in "$release_root/bin/nextpnr-"*; do
 done
 
 # --- metadata + shared release tail -----------------------------------------
-cp "$SRC_DIR/ivpm.yaml" "$release_root/" 2>/dev/null || true
+# ivpm.yaml comes from scripts/release-ivpm.yaml via ec_stage_release_ivpm, not
+# from this repo's own ivpm.yaml (which describes the *build*).
 cp "$SRC_DIR/LICENSE"   "$release_root/" 2>/dev/null || true
 ec_finalize_release "$SRC_DIR" "$release_root" "$CANDIDATE_JSON"
 tarball="nextpnr-bin-${plat}-${EC_VERSION}.tar.gz"

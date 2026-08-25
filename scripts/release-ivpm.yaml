@@ -1,0 +1,16 @@
+# Consumer-facing ivpm manifest, staged into the release tarball as ivpm.yaml
+# by edapack-common's ec_stage_release_ivpm.
+#
+# This is NOT the project's ivpm.yaml. That one describes how to *build*
+# nextpnr-bin (nextpnr sources, edapack-common); shipping it made anyone
+# installing a release fetch that too.
+#
+# nextpnr is a self-contained native binary with no runtime Python
+# requirements, so the only thing a consumer needs is the bundled binaries on
+# PATH — hence no dep-sets here.
+package:
+  name: nextpnr-bin
+
+  env:
+  - name: PATH
+    path-prepend: "${IVPM_PACKAGES}/nextpnr-bin/bin"

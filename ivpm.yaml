@@ -1,8 +1,10 @@
 package:
   name: nextpnr-bin
 
-  # When installed from a release tarball, prepend the bundled nextpnr binaries
-  # to PATH so downstream tools can invoke nextpnr-ice40, nextpnr-ecp5, etc.
+  # NOTE: this file describes how to *build* nextpnr-bin and is not shipped.
+  # The manifest a release carries is scripts/release-ivpm.yaml, staged as
+  # ivpm.yaml by edapack-common's ec_stage_release_ivpm — keep the two in sync
+  # when the PATH layout or runtime deps change.
   env:
   - name: PATH
     path-prepend: "${IVPM_PACKAGES}/nextpnr-bin/bin"
