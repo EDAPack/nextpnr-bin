@@ -1,5 +1,5 @@
 # Input components for nextpnr-bin, resolved by edapack-common's
-# resolve-inputs.py. See https://edapack.github.io (Developer Guide → build-inputs).
+# resolve-inputs.py. See https://dvkit.org/edapack/ (Developer Guide → build-inputs).
 #
 # Note: the apicula (apycula) and intervaltree chipdb generators are pip
 # build-time tools baked into the builder image; they are not git-tracked here.
