@@ -8,7 +8,12 @@
 # resolver's YAML parser neither strips trailing inline comments nor skips
 # comment lines when deciding a block's type):
 #   core nextpnr   - policy latest-tag; pin with core_ref=nextpnr-0.10 (or a branch/sha)
-#   icestorm       - chipdb data (share/icebox) for ice40
+#   icestorm       - chipdb data (share/icebox) for ice40. Pinned to 1fb7443c
+#                    (the commit before da5097a "icebox/up5k: Add FILTER_50NS
+#                    extra cells"): nextpnr-0.11.1's ice40/chipdb.py has no
+#                    FILTERIN constid and dies with KeyError: 'FILTERIN' on the
+#                    newer up5k chipdb. nextpnr gained it in 1e6050d5 (after
+#                    0.11.1); go back to branch:main once latest-tag includes it.
 #   prjtrellis     - pytrellis -> ECP5/MachXO2 chipdb (build-time)
 #   mistral        - Cyclone V; compiled inline by nextpnr
 #   prjpeppercorn  - GateMate device db (build-time). Pinned to tag:v1.13
@@ -28,7 +33,7 @@ core:
 dependencies:
   - name: icestorm
     repo: https://github.com/YosysHQ/icestorm
-    policy: branch:main
+    policy: branch:1fb7443c7c6870fadc275066c19af9c5add3482a
   - name: prjtrellis
     repo: https://github.com/YosysHQ/prjtrellis
     policy: branch:main
